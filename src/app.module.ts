@@ -10,6 +10,7 @@ import { ReporterUserModule } from './reporter_user/reporter_user.module';
 import { ParteObjetoModule } from './parte_objeto/parte_objeto.module';
 import { OrdernesMantenimientoModule } from './ordernes_mantenimiento/ordernes_mantenimiento.module';
 import { SensorModule } from './sensor/sensor.module';
+import { SapModule } from './sap/sap.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { SensorModule } from './sensor/sensor.module';
     ParteObjetoModule,
     SensorModule,
     OrdernesMantenimientoModule,
+    SapModule,
   ],
 
 })

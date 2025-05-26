@@ -16,6 +16,10 @@ export class ReporterUserController {
     return this.reporterUserService.findAll();
   }
 
+  @Get(':id/avisos-mantenimiento')
+  findAvisosMantenimiento(@Param('id') id: string) {
+    return this.reporterUserService.findAvisosMantenimiento(+id);
+  }
 
   @Delete(':id')
   remove(@Param('id') id: string) {

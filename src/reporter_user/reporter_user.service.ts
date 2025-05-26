@@ -38,4 +38,15 @@ export class ReporterUserService {
     }
     return puestoTrabajo;
   }
+
+  async findAvisosMantenimiento(id: number) {
+    const reporterUser = await this.reporterUserRepository.findOne({
+      where: { id },
+      relations: ['avisosMantenimiento']
+    });
+    if (!reporterUser) {
+      throw new NotFoundException('Reporter user not found');
+    }
+    return reporterUser.avisosMantenimiento;
+  }
 }

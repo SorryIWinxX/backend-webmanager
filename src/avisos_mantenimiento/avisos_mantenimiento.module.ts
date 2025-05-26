@@ -14,5 +14,6 @@ import { UbicacionTecnica } from 'src/ubicacion_tecnica/entities/ubicacion-tecni
   imports: [TypeOrmModule.forFeature([AvisoMantenimiento, MasterUser, TipoAviso, Equipo, ParteObjeto, ReporterUser, UbicacionTecnica])],
   controllers: [AvisosMantenimientoController],
   providers: [AvisosMantenimientoService],
+  exports: [AvisosMantenimientoService]
 })
 export class AvisosMantenimientoModule {}
