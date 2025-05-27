@@ -4,13 +4,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AvisosMantenimientoModule } from './avisos_mantenimiento/avisos_mantenimiento.module';
 import { TipoAvisosModule } from './tipo_avisos/tipo_avisos.module';
 import { EquiposModule } from './equipos/equipos.module';
-import { UbicacionTecnicaModule } from './ubicacion_tecnica/ubicacion_tecnica.module';
 import { PuestoTrabajoModule } from './puesto_trabajo/puesto_trabajo.module';
 import { ReporterUserModule } from './reporter_user/reporter_user.module';
 import { ParteObjetoModule } from './parte_objeto/parte_objeto.module';
 import { OrdernesMantenimientoModule } from './ordernes_mantenimiento/ordernes_mantenimiento.module';
 import { SensorModule } from './sensor/sensor.module';
 import { SapModule } from './sap/sap.module';
+import { InspeccionModule } from './inspeccion/inspeccion.module';
+import { MaterialModule } from './material/material.module';
 
 @Module({
   imports: [
@@ -28,13 +29,14 @@ import { SapModule } from './sap/sap.module';
     AvisosMantenimientoModule,
     TipoAvisosModule,
     EquiposModule,
-    UbicacionTecnicaModule,
     PuestoTrabajoModule,
     ReporterUserModule,
     ParteObjetoModule,
     SensorModule,
     OrdernesMantenimientoModule,
     SapModule,
+    InspeccionModule,
+    MaterialModule,
   ],
 
 })

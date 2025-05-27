@@ -8,10 +8,11 @@ import { TipoAviso } from 'src/tipo_avisos/entities/tipo-aviso.entity';
 import { Equipo } from 'src/equipos/entities/equipo.entity';
 import { ParteObjeto } from 'src/parte_objeto/entities/parte-objeto.entity';
 import { ReporterUser } from 'src/reporter_user/entities/reporter-user.entity';
-import { UbicacionTecnica } from 'src/ubicacion_tecnica/entities/ubicacion-tecnica.entity';
+import { Inspeccion } from 'src/inspeccion/entities/inspeccion.entity';
+import { Material } from 'src/material/entities/material.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AvisoMantenimiento, MasterUser, TipoAviso, Equipo, ParteObjeto, ReporterUser, UbicacionTecnica])],
+  imports: [TypeOrmModule.forFeature([AvisoMantenimiento, MasterUser, TipoAviso, Equipo, ParteObjeto, ReporterUser, Inspeccion, Material])],
   controllers: [AvisosMantenimientoController],
   providers: [AvisosMantenimientoService],
   exports: [AvisosMantenimientoService]

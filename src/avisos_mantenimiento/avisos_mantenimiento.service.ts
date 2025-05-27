@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateAvisosMantenimientoDto } from './dto/create-avisos_mantenimiento.dto';
-import { UpdateAvisosMantenimientoDto } from './dto/update-avisos_mantenimiento.dto';
 import { AvisoMantenimiento } from './entities/aviso-mantenimiento.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -9,7 +8,8 @@ import { TipoAviso } from 'src/tipo_avisos/entities/tipo-aviso.entity';
 import { Equipo } from 'src/equipos/entities/equipo.entity';
 import { ParteObjeto } from 'src/parte_objeto/entities/parte-objeto.entity';
 import { ReporterUser } from 'src/reporter_user/entities/reporter-user.entity';
-import { UbicacionTecnica } from 'src/ubicacion_tecnica/entities/ubicacion-tecnica.entity';
+import { Inspeccion } from 'src/inspeccion/entities/inspeccion.entity';
+import { Material } from 'src/material/entities/material.entity';
 
 @Injectable()
 export class AvisosMantenimientoService {
@@ -32,8 +32,11 @@ export class AvisosMantenimientoService {
     @InjectRepository(ReporterUser)
     private reporterUserRepository: Repository<ReporterUser>,
 
-    @InjectRepository(UbicacionTecnica)
-    private ubicacionTecnicaRepository: Repository<UbicacionTecnica>,
+    @InjectRepository(Inspeccion)
+    private inspeccionRepository: Repository<Inspeccion>,
+
+    @InjectRepository(Material)
+    private materialRepository: Repository<Material>,
   ) {}
 
   async create(createAvisosMantenimientoDto: CreateAvisosMantenimientoDto) {
@@ -42,7 +45,8 @@ export class AvisosMantenimientoService {
     const equipo = await this.validateEquipo(createAvisosMantenimientoDto.equipo);
     const parteObjeto = await this.validateParteObjeto(createAvisosMantenimientoDto.parteObjeto);
     const reporterUser = await this.validateReporterUser(createAvisosMantenimientoDto.reporterUser);
-    const ubicacionTecnica = await this.validateUbicacionTecnica(createAvisosMantenimientoDto.ubicacionTecnica);
+    const inspeccion = await this.validateInspeccion(createAvisosMantenimientoDto.inspeccion);
+    const material = await this.validateMaterial(createAvisosMantenimientoDto.material);
     const avisoMantenimiento = await this.avisosMantenimientoRepository.save({
       ...createAvisosMantenimientoDto,
       tipoAviso: tipoAviso,
@@ -50,7 +54,8 @@ export class AvisosMantenimientoService {
       equipo: equipo,
       parteObjeto: parteObjeto,
       reporterUser: reporterUser,
-      ubicacionTecnica: ubicacionTecnica,
+      inspeccion: inspeccion,
+      material: material,
     });
 
     return avisoMantenimiento;
@@ -108,11 +113,19 @@ export class AvisosMantenimientoService {
     return reporterUser;
   }
 
-  private async validateUbicacionTecnica(ubicacionTecnicaId: number) {
-    const ubicacionTecnica = await this.ubicacionTecnicaRepository.findOneBy({id: ubicacionTecnicaId});
-    if (!ubicacionTecnica) {
-      throw new NotFoundException('Ubicacion tecnica not found');
+  private async validateInspeccion(inspeccionId: number) {
+    const inspeccion = await this.inspeccionRepository.findOneBy({id: inspeccionId});
+    if (!inspeccion) {
+      throw new NotFoundException('Inspeccion not found');
     }
-    return ubicacionTecnica;
+    return inspeccion;
+  }
+
+  private async validateMaterial(materialId: number) {
+    const material = await this.materialRepository.findOneBy({id: materialId});
+    if (!material) {
+      throw new NotFoundException('Material not found');
+    }
+    return material;
   }
 }

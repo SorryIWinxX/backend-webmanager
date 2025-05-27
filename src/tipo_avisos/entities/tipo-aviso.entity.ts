@@ -9,6 +9,9 @@ export class TipoAviso {
   @Column()
   nombre: string;
 
+  @Column()
+  descripcion: string;
+
   @OneToMany(() => AvisoMantenimiento, (avisoMantenimiento: AvisoMantenimiento) => avisoMantenimiento.tipoAviso)
   avisosMantenimiento: AvisoMantenimiento[];
 } 
