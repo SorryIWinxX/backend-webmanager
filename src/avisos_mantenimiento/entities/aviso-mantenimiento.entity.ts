@@ -37,6 +37,8 @@ export class AvisoMantenimiento {
 
   @ManyToOne(() => ReporterUser, (reporterUser) => reporterUser.id, {
     eager: true,
+    nullable: true,
+    onDelete: 'SET NULL',
   })
   reporterUser: ReporterUser;
 
@@ -71,4 +73,7 @@ export class AvisoMantenimiento {
     default: 'pendiente'
   })
   estado: 'pendiente' | 'enviado' | 'fallido';
+
+  @Column({ nullable: true })
+  numeroSap: string;
 } 

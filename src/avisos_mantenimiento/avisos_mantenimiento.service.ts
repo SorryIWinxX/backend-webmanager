@@ -73,6 +73,12 @@ export class AvisosMantenimientoService {
     return avisoMantenimiento;
   }
 
+  async update(id: number, updateData: Partial<AvisoMantenimiento>) {
+    const avisoMantenimiento = await this.findOne(id);
+    Object.assign(avisoMantenimiento, updateData);
+    return this.avisosMantenimientoRepository.save(avisoMantenimiento);
+  }
+
   private async validateMasterUser(masterUserId: number) {
     const masterUser = await this.masterUserRepository.findOneBy({id: masterUserId});
     if (!masterUser) {

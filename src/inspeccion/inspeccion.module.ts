@@ -8,5 +8,6 @@ import { Inspeccion } from './entities/inspeccion.entity';
   imports: [TypeOrmModule.forFeature([Inspeccion])],
   controllers: [InspeccionController],
   providers: [InspeccionService],
+  exports: [InspeccionService],
 })
 export class InspeccionModule {}
