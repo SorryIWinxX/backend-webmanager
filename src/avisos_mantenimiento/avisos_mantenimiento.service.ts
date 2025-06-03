@@ -6,10 +6,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { MasterUser } from 'src/master_user/entities/master-user.entity';
 import { TipoAviso } from 'src/tipo_avisos/entities/tipo-aviso.entity';
 import { Equipo } from 'src/equipos/entities/equipo.entity';
-import { ParteObjeto } from 'src/parte_objeto/entities/parte-objeto.entity';
 import { ReporterUser } from 'src/reporter_user/entities/reporter-user.entity';
-import { Inspeccion } from 'src/inspeccion/entities/inspeccion.entity';
 import { Material } from 'src/material/entities/material.entity';
+import { LongText } from 'src/long_text/entities/long_text.entity';
+import { ItemsService } from 'src/items/items.service';
+import { Item } from 'src/items/entities/item.entity';
 
 @Injectable()
 export class AvisosMantenimientoService {
@@ -26,47 +27,95 @@ export class AvisosMantenimientoService {
     @InjectRepository(Equipo)
     private equipoRepository: Repository<Equipo>,
 
-    @InjectRepository(ParteObjeto)
-    private parteObjetoRepository: Repository<ParteObjeto>,
-
     @InjectRepository(ReporterUser)
     private reporterUserRepository: Repository<ReporterUser>,
 
-    @InjectRepository(Inspeccion)
-    private inspeccionRepository: Repository<Inspeccion>,
-
     @InjectRepository(Material)
     private materialRepository: Repository<Material>,
+
+    @InjectRepository(LongText)
+    private longTextRepository: Repository<LongText>,
+
+    private itemsService: ItemsService,
   ) {}
 
   async create(createAvisosMantenimientoDto: CreateAvisosMantenimientoDto) {
     const masterUser = await this.validateMasterUser(createAvisosMantenimientoDto.masterUser);
     const tipoAviso = await this.validateTipoAviso(createAvisosMantenimientoDto.tipoAviso);
     const equipo = await this.validateEquipo(createAvisosMantenimientoDto.equipo);
-    const parteObjeto = await this.validateParteObjeto(createAvisosMantenimientoDto.parteObjeto);
     const reporterUser = await this.validateReporterUser(createAvisosMantenimientoDto.reporterUser);
-    const inspeccion = await this.validateInspeccion(createAvisosMantenimientoDto.inspeccion);
     const material = await this.validateMaterial(createAvisosMantenimientoDto.material);
+    
     const avisoMantenimiento = await this.avisosMantenimientoRepository.save({
-      ...createAvisosMantenimientoDto,
+      numeroExt: createAvisosMantenimientoDto.numeroExt,
+      textoBreve: createAvisosMantenimientoDto.textoBreve,
+      fechaInicio: createAvisosMantenimientoDto.fechaInicio,
+      fechaFin: createAvisosMantenimientoDto.fechaFin,
+      horaInicio: createAvisosMantenimientoDto.horaInicio,
+      horaFin: createAvisosMantenimientoDto.horaFin,
       tipoAviso: tipoAviso,
       masterUser: masterUser,
       equipo: equipo,
-      parteObjeto: parteObjeto,
       reporterUser: reporterUser,
-      inspeccion: inspeccion,
       material: material,
     });
+
+    if (createAvisosMantenimientoDto.items && createAvisosMantenimientoDto.items.length > 0) {
+      const items: Item[] = [];
+      
+      for (const itemData of createAvisosMantenimientoDto.items) {
+        // Crear los longTexts si existen
+        let longTextsData: { linea: string; textLine: string; }[] | undefined = undefined;
+        if (itemData.longTextIds && itemData.longTextIds.length > 0) {
+          longTextsData = itemData.longTextIds.map(longText => ({
+            linea: longText.linea,
+            textLine: longText.textLine,
+          }));
+        }
+
+        const item = await this.itemsService.create({
+          longTexts: longTextsData,
+          inspeccionIds: itemData.inspeccionIds,
+        });
+        
+        items.push(item);
+      }
+
+      avisoMantenimiento.items = items;
+      await this.avisosMantenimientoRepository.save(avisoMantenimiento);
+    }
 
     return avisoMantenimiento;
   }
 
   async findAll() {
-    return this.avisosMantenimientoRepository.find();
+    return await this.avisosMantenimientoRepository
+      .createQueryBuilder('aviso')
+      .leftJoinAndSelect('aviso.tipoAviso', 'tipoAviso')
+      .leftJoinAndSelect('aviso.masterUser', 'masterUser')
+      .leftJoinAndSelect('aviso.equipo', 'equipo')
+      .leftJoinAndSelect('aviso.reporterUser', 'reporterUser')
+      .leftJoinAndSelect('aviso.material', 'material')
+      .leftJoinAndSelect('aviso.items', 'items')
+      .leftJoinAndSelect('items.longTexts', 'longTexts')
+      .leftJoinAndSelect('items.inspecciones', 'inspecciones')
+      .getMany();
   }
 
   async findOne(id: number) {
-    const avisoMantenimiento = await this.avisosMantenimientoRepository.findOneBy({id: id});
+    const avisoMantenimiento = await this.avisosMantenimientoRepository
+      .createQueryBuilder('aviso')
+      .leftJoinAndSelect('aviso.tipoAviso', 'tipoAviso')
+      .leftJoinAndSelect('aviso.masterUser', 'masterUser')
+      .leftJoinAndSelect('aviso.equipo', 'equipo')
+      .leftJoinAndSelect('aviso.reporterUser', 'reporterUser')
+      .leftJoinAndSelect('aviso.material', 'material')
+      .leftJoinAndSelect('aviso.items', 'items')
+      .leftJoinAndSelect('items.longTexts', 'longTexts')
+      .leftJoinAndSelect('items.inspecciones', 'inspecciones')
+      .where('aviso.id = :id', { id })
+      .getOne();
+      
     if (!avisoMantenimiento) {
       throw new NotFoundException('Aviso de mantenimiento not found');
     }
@@ -103,28 +152,12 @@ export class AvisosMantenimientoService {
     return equipo;
   }
 
-  private async validateParteObjeto(parteObjetoId: number) {
-    const parteObjeto = await this.parteObjetoRepository.findOneBy({id: parteObjetoId});
-    if (!parteObjeto) {
-      throw new NotFoundException('Parte objeto not found');
-    }
-    return parteObjeto;
-  }
-
   private async validateReporterUser(reporterUserId: number) {
     const reporterUser = await this.reporterUserRepository.findOneBy({id: reporterUserId});
     if (!reporterUser) {
       throw new NotFoundException('Reporter user not found');
     }
     return reporterUser;
-  }
-
-  private async validateInspeccion(inspeccionId: number) {
-    const inspeccion = await this.inspeccionRepository.findOneBy({id: inspeccionId});
-    if (!inspeccion) {
-      throw new NotFoundException('Inspeccion not found');
-    }
-    return inspeccion;
   }
 
   private async validateMaterial(materialId: number) {

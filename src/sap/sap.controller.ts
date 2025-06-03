@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Param, ParseIntPipe, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { SapService } from './sap.service';
 
@@ -6,41 +6,6 @@ import { SapService } from './sap.service';
 @Controller('sap')
 export class SapController {
   constructor(private readonly sapService: SapService) {}
-
-  @Post('enviar-aviso-mantenimiento')
-  @ApiOperation({ 
-    summary: 'Send maintenance notices to SAP',
-    description: 'Sends multiple maintenance notices to the SAP system'
-  })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        ids: {
-          type: 'array',
-          items: {
-            type: 'number'
-          },
-          description: 'Array of maintenance notice IDs to send to SAP'
-        }
-      }
-    }
-  })
-  @ApiResponse({ 
-    status: 201, 
-    description: 'Maintenance notices sent successfully to SAP' 
-  })
-  @ApiResponse({ 
-    status: 400, 
-    description: 'Bad request - Invalid IDs or notices not found' 
-  })
-  @ApiResponse({ 
-    status: 500, 
-    description: 'Internal server error - SAP connection failed' 
-  })
-  enviarAvisoMantenimiento(@Body('ids') ids: number[]) {
-    return this.sapService.enviarAvisoMantenimiento(ids);
-  }
 
   @Get('sincronizar-tablas')
   @ApiOperation({ 
@@ -144,6 +109,119 @@ export class SapController {
   })
   sincronizarTipoAvisos() {
     return this.sapService.sincronizarTipoAvisos();
+  }
+
+  @Post('enviar-aviso/:id')
+  @ApiOperation({ 
+    summary: 'Send maintenance notice to SAP',
+    description: 'Sends a maintenance notice to SAP system and updates the local status'
+  })
+  @ApiParam({
+    name: 'id',
+    type: 'number',
+    description: 'ID of the maintenance notice to send'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Maintenance notice sent successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: {
+          type: 'boolean',
+          description: 'Whether the notice was sent successfully'
+        },
+        message: {
+          type: 'string',
+          description: 'Status message'
+        },
+        data: {
+          type: 'object',
+          properties: {
+            avisoId: { type: 'number' },
+            sapResponse: { type: 'string' }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Bad request - Missing required data in maintenance notice' 
+  })
+  @ApiResponse({ 
+    status: 404, 
+    description: 'Maintenance notice not found' 
+  })
+  @ApiResponse({ 
+    status: 500, 
+    description: 'Internal server error - Failed to send notice to SAP' 
+  })
+  enviarAvisoMantenimiento(@Param('id', ParseIntPipe) id: number) {
+    return this.sapService.enviarAvisoMantenimiento(id);
+  }
+
+  @Post('enviar-avisos')
+  @ApiOperation({ 
+    summary: 'Send multiple maintenance notices to SAP',
+    description: 'Sends multiple maintenance notices to SAP system and updates their local status'
+  })
+  @ApiBody({
+    description: 'Array of maintenance notice IDs to send',
+    schema: {
+      type: 'object',
+      properties: {
+        avisosIds: {
+          type: 'array',
+          items: {
+            type: 'number'
+          },
+          description: 'Array of maintenance notice IDs',
+          example: [1, 2, 3, 4, 5]
+        }
+      },
+      required: ['avisosIds']
+    }
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Maintenance notices processed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: {
+          type: 'boolean',
+          description: 'Whether all notices were sent successfully'
+        },
+        message: {
+          type: 'string',
+          description: 'Summary message'
+        },
+        data: {
+          type: 'object',
+          properties: {
+            totalProcessed: { type: 'number' },
+            successCount: { type: 'number' },
+            errorCount: { type: 'number' },
+            results: { 
+              type: 'array',
+              items: { type: 'object' }
+            }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Bad request - Invalid array of IDs' 
+  })
+  @ApiResponse({ 
+    status: 500, 
+    description: 'Internal server error - Failed to process notices' 
+  })
+  enviarAvisosMantenimiento(@Body() body: { avisosIds: number[] }) {
+    return this.sapService.enviarAvisosMantenimiento(body.avisosIds);
   }
 
 }

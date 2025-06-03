@@ -6,12 +6,12 @@ import { TipoAvisosModule } from './tipo_avisos/tipo_avisos.module';
 import { EquiposModule } from './equipos/equipos.module';
 import { PuestoTrabajoModule } from './puesto_trabajo/puesto_trabajo.module';
 import { ReporterUserModule } from './reporter_user/reporter_user.module';
-import { ParteObjetoModule } from './parte_objeto/parte_objeto.module';
 import { OrdernesMantenimientoModule } from './ordernes_mantenimiento/ordernes_mantenimiento.module';
-import { SensorModule } from './sensor/sensor.module';
-import { SapModule } from './sap/sap.module';
 import { InspeccionModule } from './inspeccion/inspeccion.module';
 import { MaterialModule } from './material/material.module';
+import { LongTextModule } from './long_text/long_text.module';
+import { ItemsModule } from './items/items.module';
+import { SapModule } from './sap/sap.module';
 
 @Module({
   imports: [
@@ -31,12 +31,12 @@ import { MaterialModule } from './material/material.module';
     EquiposModule,
     PuestoTrabajoModule,
     ReporterUserModule,
-    ParteObjetoModule,
-    SensorModule,
     OrdernesMantenimientoModule,
-    SapModule,
     InspeccionModule,
     MaterialModule,
+    LongTextModule,
+    ItemsModule,
+    SapModule,
   ],
 
 })

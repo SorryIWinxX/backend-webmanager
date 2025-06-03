@@ -4,8 +4,18 @@ import { ApiProperty } from "@nestjs/swagger";
 
 export class CreateInspeccionDto {
     @ApiProperty({
-        description: 'Inspection catalog identifier',
-        example: 'CAT-INSP-001',
+        description: 'Código del grupo de inspección',
+        example: 'AIREACA',
+        type: String,
+        maxLength: 50
+    })
+    @IsString()
+    @IsNotEmpty()
+    codigoGrupo: string;
+
+    @ApiProperty({
+        description: 'Catalog identifier',
+        example: 'B',
         type: String,
         maxLength: 50
     })
@@ -15,7 +25,7 @@ export class CreateInspeccionDto {
 
     @ApiProperty({
         description: 'Inspection code',
-        example: 'INSP-VIB-001',
+        example: '0010',
         type: String,
         maxLength: 50
     })
@@ -24,22 +34,12 @@ export class CreateInspeccionDto {
     codigo: string;
     
     @ApiProperty({
-        description: 'Detailed description of the inspection procedure',
-        example: 'Inspección de vibración en rodamientos principales',
+        description: 'Descripción de la inspección',
+        example: 'VENTILADOR',
         type: String,
         maxLength: 500
     })
     @IsString()
     @IsNotEmpty()
     descripcion: string;
-
-    @ApiProperty({
-        description: 'Secondary catalog identifier',
-        example: 'CAT-SEC-001',
-        type: String,
-        maxLength: 50
-    })
-    @IsString()
-    @IsNotEmpty()
-    catalago2: string;
 }

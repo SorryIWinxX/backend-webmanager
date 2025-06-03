@@ -1,10 +1,12 @@
-import { AvisoMantenimiento } from "src/avisos_mantenimiento/entities/aviso-mantenimiento.entity";
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity('inspeccion')
 export class Inspeccion {
     @PrimaryGeneratedColumn()
     id: number;
+
+    @Column()
+    codigoGrupo: string;
 
     @Column()
     catalogo: string;
@@ -14,10 +16,4 @@ export class Inspeccion {
 
     @Column()
     descripcion: string;
-
-    @Column()
-    catalago2: string;
-
-    @OneToMany(() => AvisoMantenimiento, (avisoMantenimiento: AvisoMantenimiento) => avisoMantenimiento.inspeccion)
-    avisosMantenimiento: AvisoMantenimiento[];
 }

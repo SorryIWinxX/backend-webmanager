@@ -1,159 +1,254 @@
-import { IsDate, IsEnum, IsNumber, IsOptional, IsString } from "class-validator";
+import { IsString, IsOptional, IsDateString, IsNumber } from "class-validator";
 import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
-export enum EstadoOrden {
-  PLANIFICADA = 'planificada',
-  EN_PROGRESO = 'en_progreso',
-  COMPLETADA = 'completada',
-  CANCELADA = 'cancelada'
-}
-
-export enum PrioridadOrden {
-  BAJA = 'baja',
-  MEDIA = 'media',
-  ALTA = 'alta',
-  CRITICA = 'critica'
-}
-
 export class CreateOrdernesMantenimientoDto {
   @ApiProperty({
-    description: 'ID of the maintenance notice that originated this order',
-    example: 1,
-    type: Number,
-    minimum: 1
-  })
-  @IsNumber()
-  avisoMantenimiento: number;
-
-  @ApiProperty({
-    description: 'Order number (auto-generated if not provided)',
-    example: 'ORD-2024-001',
+    description: 'Order ID from SAP system',
+    example: '000004013308',
     type: String,
     maxLength: 50
   })
   @IsString()
-  numeroOrden: string;
+  orderId: string;
 
-  @ApiProperty({
-    description: 'Brief description of the maintenance work to be performed',
-    example: 'Reemplazo de rodamientos en bomba centrífuga',
+  @ApiPropertyOptional({
+    description: 'Order type (e.g., PM02)',
+    example: 'PM02',
     type: String,
-    maxLength: 500
-  })
-  @IsString()
-  descripcionTrabajo: string;
-
-  @ApiProperty({
-    description: 'Priority level of the maintenance order',
-    enum: PrioridadOrden,
-    example: PrioridadOrden.ALTA,
-    enumName: 'PrioridadOrden'
-  })
-  @IsEnum(PrioridadOrden)
-  prioridad: PrioridadOrden;
-
-  @ApiProperty({
-    description: 'Current status of the maintenance order',
-    enum: EstadoOrden,
-    example: EstadoOrden.PLANIFICADA,
-    enumName: 'EstadoOrden'
-  })
-  @IsEnum(EstadoOrden)
-  estado: EstadoOrden;
-
-  @ApiProperty({
-    description: 'Planned start date for the maintenance work',
-    example: '2024-01-15',
-    type: Date,
-    format: 'date'
-  })
-  @Type(() => Date)
-  @IsDate()
-  fechaInicioPlaneada: Date;
-
-  @ApiProperty({
-    description: 'Planned end date for the maintenance work',
-    example: '2024-01-16',
-    type: Date,
-    format: 'date'
-  })
-  @Type(() => Date)
-  @IsDate()
-  fechaFinPlaneada: Date;
-
-  @ApiPropertyOptional({
-    description: 'Actual start date of the maintenance work (optional)',
-    example: '2024-01-15',
-    type: Date,
-    format: 'date',
-    nullable: true
-  })
-  @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  fechaInicioReal?: Date;
-
-  @ApiPropertyOptional({
-    description: 'Actual end date of the maintenance work (optional)',
-    example: '2024-01-16',
-    type: Date,
-    format: 'date',
-    nullable: true
-  })
-  @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  fechaFinReal?: Date;
-
-  @ApiProperty({
-    description: 'Estimated duration in hours',
-    example: 8,
-    type: Number,
-    minimum: 0.5
-  })
-  @IsNumber()
-  duracionEstimada: number;
-
-  @ApiPropertyOptional({
-    description: 'Actual duration in hours (optional)',
-    example: 10,
-    type: Number,
-    minimum: 0,
-    nullable: true
-  })
-  @IsOptional()
-  @IsNumber()
-  duracionReal?: number;
-
-  @ApiProperty({
-    description: 'ID of the technician assigned to this order',
-    example: 1,
-    type: Number,
-    minimum: 1
-  })
-  @IsNumber()
-  tecnicoAsignado: number;
-
-  @ApiPropertyOptional({
-    description: 'Additional notes or observations (optional)',
-    example: 'Verificar alineación después del reemplazo',
-    type: String,
-    maxLength: 1000,
-    nullable: true
+    maxLength: 10
   })
   @IsOptional()
   @IsString()
-  observaciones?: string;
+  orderType?: string;
 
   @ApiPropertyOptional({
-    description: 'Estimated cost of the maintenance work (optional)',
-    example: 1500.50,
-    type: Number,
-    minimum: 0,
-    nullable: true
+    description: 'Notification number',
+    example: '000010014036',
+    type: String,
+    maxLength: 50
   })
   @IsOptional()
+  @IsString()
+  notifNo?: string;
+
+  @ApiPropertyOptional({
+    description: 'User who entered the order',
+    example: 'IP1020231027',
+    type: String,
+    maxLength: 50
+  })
+  @IsOptional()
+  @IsString()
+  enteredBy?: string;
+
+  @ApiPropertyOptional({
+    description: 'Date when the order was entered',
+    example: '2023-10-27',
+    type: String,
+    format: 'date'
+  })
+  @IsOptional()
+  @IsDateString()
+  enterDate?: string;
+
+  @ApiPropertyOptional({
+    description: 'User who last changed the order',
+    example: 'USER123',
+    type: String,
+    maxLength: 50
+  })
+  @IsOptional()
+  @IsString()
+  changedBy?: string;
+
+  @ApiPropertyOptional({
+    description: 'Short text description of the order',
+    example: 'PLAN PREVENTIVO 1',
+    type: String,
+    maxLength: 255
+  })
+  @IsOptional()
+  @IsString()
+  shortText?: string;
+
+  @ApiPropertyOptional({
+    description: 'ABC indicator',
+    example: 'A',
+    type: String,
+    maxLength: 10
+  })
+  @IsOptional()
+  @IsString()
+  abcIndic?: string;
+
+  @ApiPropertyOptional({
+    description: 'Priority level',
+    example: '1',
+    type: String,
+    maxLength: 10
+  })
+  @IsOptional()
+  @IsString()
+  priority?: string;
+
+  @ApiPropertyOptional({
+    description: 'Equipment number',
+    example: '000000000010000401',
+    type: String,
+    maxLength: 50
+  })
+  @IsOptional()
+  @IsString()
+  equipment?: string;
+
+  @ApiPropertyOptional({
+    description: 'Equipment description',
+    example: 'MOTOR ELECTRICO 70 HP',
+    type: String,
+    maxLength: 255
+  })
+  @IsOptional()
+  @IsString()
+  equiDescr?: string;
+
+  @ApiPropertyOptional({
+    description: 'Functional location',
+    example: '1101-030-PT-01',
+    type: String,
+    maxLength: 50
+  })
+  @IsOptional()
+  @IsString()
+  funcLoc?: string;
+
+  @ApiPropertyOptional({
+    description: 'Functional location description',
+    example: 'PLANTA 01',
+    type: String,
+    maxLength: 255
+  })
+  @IsOptional()
+  @IsString()
+  funclDescr?: string;
+
+  @ApiPropertyOptional({
+    description: 'Assembly information',
+    example: 'ASM001',
+    type: String,
+    maxLength: 50
+  })
+  @IsOptional()
+  @IsString()
+  assembly?: string;
+
+  @ApiPropertyOptional({
+    description: 'Planning plant',
+    example: '3001',
+    type: String,
+    maxLength: 10
+  })
+  @IsOptional()
+  @IsString()
+  planPlant?: string;
+
+  @ApiPropertyOptional({
+    description: 'Responsible planner group',
+    example: 'GROUP01',
+    type: String,
+    maxLength: 50
+  })
+  @IsOptional()
+  @IsString()
+  respPlannerGroup?: string;
+
+  @ApiPropertyOptional({
+    description: 'Main work center',
+    example: 'MEC400',
+    type: String,
+    maxLength: 50
+  })
+  @IsOptional()
+  @IsString()
+  mnWkCtr?: string;
+
+  @ApiPropertyOptional({
+    description: 'System responsible',
+    example: 'SYS01',
+    type: String,
+    maxLength: 50
+  })
+  @IsOptional()
+  @IsString()
+  systemResp?: string;
+
+  @ApiPropertyOptional({
+    description: 'Maintenance plan',
+    example: '000000000256',
+    type: String,
+    maxLength: 50
+  })
+  @IsOptional()
+  @IsString()
+  maintPlan?: string;
+
+  @ApiPropertyOptional({
+    description: 'Work center',
+    example: 'WC001',
+    type: String,
+    maxLength: 50
+  })
+  @IsOptional()
+  @IsString()
+  workCntr?: string;
+
+  @ApiPropertyOptional({
+    description: 'PM activity type',
+    example: '002',
+    type: String,
+    maxLength: 10
+  })
+  @IsOptional()
+  @IsString()
+  pmactType?: string;
+
+  @ApiPropertyOptional({
+    description: 'Start point',
+    example: 'SP001',
+    type: String,
+    maxLength: 50
+  })
+  @IsOptional()
+  @IsString()
+  startPoint?: string;
+
+  @ApiPropertyOptional({
+    description: 'End point',
+    example: 'EP001',
+    type: String,
+    maxLength: 50
+  })
+  @IsOptional()
+  @IsString()
+  endPoint?: string;
+
+  @ApiPropertyOptional({
+    description: 'Linear length measurement',
+    example: 100.5,
+    type: Number
+  })
+  @IsOptional()
+  @Type(() => Number)
   @IsNumber()
-  costoEstimado?: number;
+  linearLength?: number;
+
+  @ApiPropertyOptional({
+    description: 'Linear unit of measurement',
+    example: 'M',
+    type: String,
+    maxLength: 10
+  })
+  @IsOptional()
+  @IsString()
+  linearUnit?: string;
 }

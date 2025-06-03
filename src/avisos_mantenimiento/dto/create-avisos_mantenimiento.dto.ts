@@ -1,6 +1,38 @@
-import { IsDate, IsEnum, IsNumber, IsOptional, IsString } from "class-validator";
+import { IsDate, IsNumber, IsOptional, IsString, IsArray, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { CreateLongTextDto } from "../../long_text/dto/create-long_text.dto";
+
+// DTO para los items del aviso de mantenimiento
+export class CreateItemForAvisoDto {
+  @ApiProperty({
+    description: 'Array of inspection IDs',
+    example: [1, 2, 3],
+    type: [Number]
+  })
+  @IsArray()
+  @IsNumber({}, { each: true })
+  inspeccionIds: number[];
+
+  @ApiProperty({
+    description: 'Array of long text objects to be created',
+    type: [CreateLongTextDto],
+    example: [
+      {
+        "linea": "line1",
+        "textLine": "Esta es la línea 1"
+      },
+      {
+        "linea": "line2", 
+        "textLine": "Esta es la línea 2"
+      }
+    ]
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateLongTextDto)
+  longTextIds: CreateLongTextDto[];
+}
 
 export class CreateAvisosMantenimientoDto {
   @ApiPropertyOptional({
@@ -41,15 +73,6 @@ export class CreateAvisosMantenimientoDto {
   equipo: number;
 
   @ApiProperty({
-    description: 'ID of the object part that requires maintenance',
-    example: 1,
-    type: Number,
-    minimum: 1
-  })
-  @IsNumber()
-  parteObjeto: number;
-
-  @ApiProperty({
     description: 'ID of the reporter user who identified the issue',
     example: 1,
     type: Number,
@@ -57,15 +80,6 @@ export class CreateAvisosMantenimientoDto {
   })
   @IsNumber()
   reporterUser: number;
-
-  @ApiProperty({
-    description: 'ID of the inspection procedure to be followed',
-    example: 1,
-    type: Number,
-    minimum: 1
-  })
-  @IsNumber()
-  inspeccion: number;
 
   @ApiProperty({
     description: 'ID of the material required for maintenance',
@@ -126,4 +140,32 @@ export class CreateAvisosMantenimientoDto {
   @IsOptional()
   @IsString()
   horaFin?: string;
+
+  @ApiProperty({
+    description: 'Array of items with inspections and long texts',
+    type: [CreateItemForAvisoDto],
+    example: [
+      {
+        "inspeccionIds": [1, 2, 3],
+        "longTextIds": [
+          {
+            "linea": "line1",
+            "textLine": "Esta es la línea 1"
+          },
+          {
+            "linea": "line2",
+            "textLine": "Esta es la línea 2"
+          },
+          {
+            "linea": "line3",
+            "textLine": "Esta es la línea 3"
+          }
+        ]
+      }
+    ]
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateItemForAvisoDto)
+  items: CreateItemForAvisoDto[];
 }

@@ -28,7 +28,7 @@ async function bootstrap() {
       - **SAP Integration**: Synchronization with SAP systems
       - **Maintenance Management**: Complete CRUD operations for maintenance notices and orders
       - **User Management**: Master users and reporter users with role-based access
-      - **Equipment Management**: Equipment, sensors, and technical objects
+      - **Equipment Management**: Equipment registry and technical specifications
       - **Inspection Management**: Inspection catalogs and procedures
       - **Material Management**: Material and parts management
       
@@ -45,10 +45,8 @@ async function bootstrap() {
     .addServer('http://localhost:3000', 'Development Server')
     .addServer('https://api.seppat.com', 'Production Server')
     .addTag('sap', 'SAP Integration - Synchronization and data exchange with SAP systems')
-    .addTag('sensor', 'Sensor Management - CRUD operations for sensors and monitoring devices')
     .addTag('avisos_mantenimiento', 'Maintenance Notices - Create, manage and track maintenance notices')
     .addTag('ordenes_mantenimiento', 'Maintenance Orders - Maintenance order lifecycle management')
-    .addTag('parte_objeto', 'Object Parts - Technical object parts and components')
     .addTag('reporter_user', 'Reporter Users - Field users who report maintenance issues')
     .addTag('puesto_trabajo', 'Work Positions - Job positions and work center management')
     .addTag('equipos', 'Equipment Management - Equipment registry and technical specifications')

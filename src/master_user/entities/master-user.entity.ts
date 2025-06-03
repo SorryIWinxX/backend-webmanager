@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany, DeleteDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, OneToMany, DeleteDateColumn, Unique } from 'typeorm';
 import { AvisoMantenimiento } from 'src/avisos_mantenimiento/entities/aviso-mantenimiento.entity';
 
 @Entity('master_user')
@@ -6,6 +6,7 @@ export class MasterUser {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Unique(['username'])
   @Column()
   username: string;
 

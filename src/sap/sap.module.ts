@@ -6,9 +6,10 @@ import { InspeccionModule } from 'src/inspeccion/inspeccion.module';
 import { EquiposModule } from 'src/equipos/equipos.module';
 import { MaterialModule } from 'src/material/material.module';
 import { TipoAvisosModule } from 'src/tipo_avisos/tipo_avisos.module';
+import { OrdernesMantenimientoModule } from 'src/ordernes_mantenimiento/ordernes_mantenimiento.module';
 
 @Module({
-  imports: [AvisosMantenimientoModule, InspeccionModule, EquiposModule, MaterialModule, TipoAvisosModule],
+  imports: [AvisosMantenimientoModule, InspeccionModule, EquiposModule, MaterialModule, TipoAvisosModule, OrdernesMantenimientoModule],
   controllers: [SapController],
   providers: [SapService],
 })

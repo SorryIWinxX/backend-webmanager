@@ -1,9 +1,10 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import { AvisosMantenimientoService } from 'src/avisos_mantenimiento/avisos_mantenimiento.service';
+import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { InspeccionService } from 'src/inspeccion/inspeccion.service';
 import { EquiposService } from 'src/equipos/equipos.service';
 import { MaterialService } from 'src/material/material.service';
 import { TipoAvisosService } from 'src/tipo_avisos/tipo_avisos.service';
+import { AvisosMantenimientoService } from 'src/avisos_mantenimiento/avisos_mantenimiento.service';
+import { OrdernesMantenimientoService } from 'src/ordernes_mantenimiento/ordernes_mantenimiento.service';
 import axios from 'axios';
 import * as xml2js from 'xml2js';
 
@@ -11,184 +12,22 @@ const CHUNK_SIZE = 100; // Define chunk size for processing
 
 @Injectable()
 export class SapService {
-  private readonly sapUrl = 'http://smadev.laboratoriossmart.com:8000/sap/bc/srt/rfc/sap/zws_crear_aviso/300/zws_crear_aviso/zws_crear_aviso';
 
   constructor(
-    private readonly avisosMantenimientoService: AvisosMantenimientoService,
     private readonly inspeccionService: InspeccionService,
     private readonly equiposService: EquiposService,
     private readonly materialService: MaterialService,
     private readonly tipoAvisosService: TipoAvisosService,
+    private readonly avisosMantenimientoService: AvisosMantenimientoService,
+    private readonly ordernesMantenimientoService: OrdernesMantenimientoService,
   ) {}
 
-  async enviarAvisoMantenimiento(ids: number[]) {
-    try {
-      // Process all IDs in parallel
-      const results = await Promise.all(
-        ids.map(async (id) => {
-          try {
-            // Obtener el aviso de mantenimiento con todas sus relaciones
-            const aviso = await this.avisosMantenimientoService.findOne(id);
-            
-            if (!aviso) {
-              return {
-                id,
-                success: false,
-                message: 'Aviso de mantenimiento no encontrado'
-              };
-            }
-
-            // Formatear fechas y horas para SAP
-            const fechaInicioFormatted = this.formatDate(aviso.fechaInicio);
-            const fechaFinFormatted = aviso.fechaFin ? this.formatDate(aviso.fechaFin) : fechaInicioFormatted;
-            const horaInicioFormatted = this.formatTime(aviso.horaInicio);
-            const horaFinFormatted = aviso.horaFin ? this.formatTime(aviso.horaFin) : horaInicioFormatted;
-
-            // Crear el XML SOAP con los datos disponibles
-            const soapBody = this.createSoapXml(aviso, fechaInicioFormatted, fechaFinFormatted, horaInicioFormatted, horaFinFormatted);
-
-            // Configurar headers para la petición SOAP
-            const headers = {
-              'Content-Type': 'text/xml; charset=utf-8',
-              'SOAPAction': 'urn:sap-com:document:sap:rfc:functions:ZIMMF_CREAR_AVISO',
-            };
-
-            // Mockup response para simular éxito
-            const mockupResponse = {
-              status: 200,
-              data: {
-                ZIMMF_CREAR_AVISO: {
-                  E_NOTIF_NUMBER: `NOTIF${id.toString().padStart(8, '0')}`,
-                  E_RETURN: {
-                    TYPE: 'S',
-                    MESSAGE: 'Aviso creado exitosamente en SAP'
-                  }
-                }
-              }
-            };
-
-            // Enviar petición a SAP (comentado para usar mockup)
-            // const response = await axios.post(this.sapUrl, soapBody, { headers });
-            const response = mockupResponse;
-
-            // Actualizar estado del aviso según la respuesta
-            if (response.status === 200) {
-              // Actualizar el estado del aviso a 'enviado'
-              await this.avisosMantenimientoService.update(id, {
-                estado: 'enviado',
-                numeroSap: response.data.ZIMMF_CREAR_AVISO.E_NOTIF_NUMBER
-              });
-
-              return {
-                id,
-                success: true,
-                message: 'Aviso enviado exitosamente a SAP',
-                numeroSap: response.data.ZIMMF_CREAR_AVISO.E_NOTIF_NUMBER,
-                data: response.data
-              };
-            }
-
-            return {
-              id,
-              success: false,
-              message: 'Error al enviar aviso a SAP',
-              data: response.data
-            };
-
-          } catch (error) {
-            // Actualizar estado del aviso a 'fallido'
-            await this.avisosMantenimientoService.update(id, {
-              estado: 'fallido'
-            });
-            
-            return {
-              id,
-              success: false,
-              message: `Error al enviar aviso a SAP: ${error.message}`
-            };
-          }
-        })
-      );
-
-      return {
-        success: true,
-        message: 'Proceso de envío completado',
-        results
-      };
-
-    } catch (error) {
-      throw new HttpException(
-        `Error al procesar los avisos: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
-  }
-
-  private createSoapXml(aviso: any, fechaInicio: string, fechaFin: string, horaInicio: string, horaFin: string): string {
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-                  xmlns:urn="urn:sap-com:document:sap:rfc:functions">
-   <soapenv:Header/>
-   <soapenv:Body>
-      <urn:ZIMMF_CREAR_AVISO>
-         <I_NOTHEAD>
-            ${aviso.numeroExt ? `<EXTERNAL_NUMBER>${aviso.numeroExt}</EXTERNAL_NUMBER>` : '<EXTERNAL_NUMBER></EXTERNAL_NUMBER>'}
-            <NOTIF_TYPE>${aviso.tipoAviso?.codigo || 'M1'}</NOTIF_TYPE>
-            ${aviso.equipo?.codigo ? `<EQUIPMENT>${aviso.equipo.codigo}</EQUIPMENT>` : ''}
-            ${aviso.ubicacionTecnica?.codigo ? `<FUNCT_LOC>${aviso.ubicacionTecnica.codigo}</FUNCT_LOC>` : ''}
-            ${aviso.parteObjeto?.codigo ? `<ASSEMBLY>${aviso.parteObjeto.codigo}</ASSEMBLY>` : ''}
-            <SHORT_TEXT>${aviso.textoBreve}</SHORT_TEXT>
-            <DESSTDATE>${fechaInicio}</DESSTDATE>
-            <DESSTTIME>${horaInicio}</DESSTTIME>
-            <DESENDDATE>${fechaFin}</DESENDDATE>
-            <DESENDTM>${horaFin}</DESENDTM>
-            ${aviso.masterUser?.codigo ? `<PM_WKCTR>${aviso.masterUser.codigo}</PM_WKCTR>` : ''}
-            ${aviso.reporterUser?.codigo ? `<REPORTEDBY>${aviso.reporterUser.codigo.substring(0, 12)}</REPORTEDBY>` : ''}
-         </I_NOTHEAD>
-         <TI_LONGTEX>
-            <item>
-               <CONSE>0000000001</CONSE>
-               <SUBCO>00001</SUBCO>
-               <LINEA>00001</LINEA>
-               <TEXT_LINE>${aviso.textoBreve}</TEXT_LINE>
-            </item>
-         </TI_LONGTEX>
-         
-         <TI_NOTITEM>
-            <item>
-               <CONSE>0000000001</CONSE>
-               <SUBCO>00001</SUBCO>
-               <ITEM_KEY>0001</ITEM_KEY>
-               <ITEM_SORT_NO>0001</ITEM_SORT_NO>
-               <DESCRIPT>${aviso.textoBreve}</DESCRIPT>
-            </item>
-         </TI_NOTITEM>
-      </urn:ZIMMF_CREAR_AVISO>
-   </soapenv:Body>
-</soapenv:Envelope>`;
-  }
-
-  private formatDate(date: Date): string {
-    if (!date) return '';
-    const d = new Date(date);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  private formatTime(time: string): string {
-    if (!time) return '00:00:00';
-    // Si el tiempo ya está en formato HH:MM:SS, devolverlo tal como está
-    if (time.match(/^\d{2}:\d{2}:\d{2}$/)) {
-      return time;
-    }
-    // Si está en formato HH:MM, agregar :00
-    if (time.match(/^\d{2}:\d{2}$/)) {
-      return `${time}:00`;
-    }
-    return `${time}:00:00`;
-  }
+  /*
+  Sincronizar tablas con SAP
+  Sincronizar equipos con SAP
+  Sincronizar materiales con SAP
+  Sincronizar tipo avisos con SAP
+  */
 
   async sincronizarTablas() {
     try {
@@ -197,12 +36,14 @@ export class SapService {
         inspeccionesResult,
         equiposResult,
         materialesResult,
-        tipoAvisosResult
+        tipoAvisosResult,
+        ordenesMantenimientoResult
       ] = await Promise.allSettled([
         this.sincronizarInspecciones(),
         this.sincronizarEquipos(),
         this.sincronizarMateriales(),
-        this.sincronizarTipoAvisos()
+        this.sincronizarTipoAvisos(),
+        this.sincronizarOrdenesMantenimiento()
       ]);
 
       // Process results and handle any failures
@@ -210,7 +51,8 @@ export class SapService {
         inspecciones: this.processSettledResult(inspeccionesResult, 'Inspecciones'),
         equipos: this.processSettledResult(equiposResult, 'Equipos'),
         materiales: this.processSettledResult(materialesResult, 'Materiales'),
-        tipoAvisos: this.processSettledResult(tipoAvisosResult, 'Tipo Avisos')
+        tipoAvisos: this.processSettledResult(tipoAvisosResult, 'Tipo Avisos'),
+        ordenesMantenimiento: this.processSettledResult(ordenesMantenimientoResult, 'Órdenes de Mantenimiento')
       };
 
       // Calculate totals
@@ -840,6 +682,441 @@ export class SapService {
     } catch (error) {
       throw new HttpException(
         `Error al sincronizar tipo avisos con SAP: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  private async getTableOrdenesMantenimiento() {
+    try {
+      const sapSyncUrl = 'http://smadev.laboratoriossmart.com:8000/sap/bc/srt/rfc/sap/zws_lista_ordenes/300/zws_lista_ordenes/zws_lista_ordenes';
+      
+      const soapBody = `<soapenv:Envelope 
+  xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+  xmlns:urn="urn:sap-com:document:sap:rfc:functions">
+  
+  <soapenv:Header/>
+  <soapenv:Body>
+    <urn:ZIMMF_LISTA_ORDENES>
+      
+      <I_STATUS>
+        <OFN>X</OFN>
+        <RST></RST>
+        <IAR></IAR>
+        <MAB></MAB>
+      </I_STATUS>
+      
+      <TI_RANGES>
+        <item>
+          <FIELD_NAME>OPTIONS_FOR_PLANPLANT</FIELD_NAME>
+               <SIGN>I</SIGN>
+               <OPTION>EQ</OPTION>
+               <LOW_VALUE>3001</LOW_VALUE>
+               <HIGH_VALUE></HIGH_VALUE>
+        </item>
+      </TI_RANGES>
+      
+      <TI_RESULT/>
+      
+    </urn:ZIMMF_LISTA_ORDENES>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+
+      // Configurar headers para la petición SOAP
+      const headers = {
+        'Content-Type': 'text/xml; charset=utf-8',
+        'SOAPAction': 'urn:sap-com:document:sap:rfc:functions:ZIMMF_LISTA_ORDENES',
+      };
+
+      // Realizar la petición POST a SAP
+      const response = await axios.post(sapSyncUrl, soapBody, { headers });
+
+      if (response.status === 200) {
+        return {
+          success: true,
+          message: 'Sincronización de órdenes de mantenimiento con SAP completada exitosamente',
+          data: response.data
+        };
+      }
+
+      return {
+        success: false,
+        message: 'Error en la sincronización de órdenes de mantenimiento con SAP',
+        data: response.data
+      };
+
+    } catch (error) {
+      throw new HttpException(
+        `Error al sincronizar órdenes de mantenimiento con SAP: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  async sincronizarOrdenesMantenimiento() {
+    try {
+      const response = await this.getTableOrdenesMantenimiento();
+      
+      if (response.success && response.data) {
+        // Parse the XML response
+        const parser = new xml2js.Parser({ explicitArray: false });
+        const parsedData = await parser.parseStringPromise(response.data);
+        
+        // Extract TI_RESULT data from the parsed XML
+        const soapBody = parsedData['soap-env:Envelope']['soap-env:Body'];
+        const zimmfResponse = soapBody['n0:ZIMMF_LISTA_ORDENESResponse'];
+        const tiResult = zimmfResponse['TI_RESULT'];
+        
+        let ordenesData = [];
+        if (tiResult && tiResult.item) {
+          // Handle both single item and array of items
+          ordenesData = Array.isArray(tiResult.item) ? tiResult.item : [tiResult.item];
+        }
+        
+        // Process ordenes in chunks
+        let totalProcessedItems = 0;
+        let totalCreatedCount = 0;
+        let totalUpdatedCount = 0;
+        let totalErrorCount = 0;
+
+        for (let i = 0; i < ordenesData.length; i += CHUNK_SIZE) {
+          const chunk = ordenesData.slice(i, i + CHUNK_SIZE);
+          const upsertResult = await this.ordernesMantenimientoService.upsertOrdenesMantenimiento(chunk);
+          totalCreatedCount += upsertResult.createdCount;
+          totalUpdatedCount += upsertResult.updatedCount;
+          totalErrorCount += upsertResult.errorCount;
+          totalProcessedItems += chunk.length;
+        }
+        
+        return {
+          success: true,
+          message: 'Sincronización de órdenes de mantenimiento con SAP completada exitosamente',
+          data: {
+            processedItems: totalProcessedItems,
+            createdCount: totalCreatedCount,
+            updatedCount: totalUpdatedCount,
+            errorCount: totalErrorCount
+          }
+        };
+      }
+      
+      return {
+        success: false,
+        message: 'Error en la sincronización de órdenes de mantenimiento con SAP',
+      };
+      
+    } catch (error) {
+      throw new HttpException(
+        `Error al sincronizar órdenes de mantenimiento con SAP: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /*
+  Enviar avisos de mantenimiento a SAP
+  */
+
+  async enviarAvisoMantenimiento(avisoId: number) {
+    try {
+      // Obtener el aviso de mantenimiento con todas sus relaciones
+      const avisoMantenimiento = await this.avisosMantenimientoService.findOne(avisoId);
+      
+      if (!avisoMantenimiento) {
+        throw new HttpException(
+          'Aviso de mantenimiento no encontrado',
+          HttpStatus.NOT_FOUND
+        );
+      }
+
+      // Verificar que el aviso tenga los datos necesarios
+      if (!avisoMantenimiento.tipoAviso?.nombre) {
+        throw new HttpException(
+          'El aviso debe tener un tipo de aviso válido',
+          HttpStatus.BAD_REQUEST
+        );
+      }
+
+      if (!avisoMantenimiento.equipo?.numeroEquipo || !avisoMantenimiento.equipo?.ubicacionTecnica || !avisoMantenimiento.equipo?.puestoTrabajo) {
+        throw new HttpException(
+          'El equipo debe tener número de equipo, ubicación técnica y puesto de trabajo',
+          HttpStatus.BAD_REQUEST
+        );
+      }
+
+      if (!avisoMantenimiento.textoBreve) {
+        throw new HttpException(
+          'El aviso debe tener un texto breve',
+          HttpStatus.BAD_REQUEST
+        );
+      }
+
+      // Construir la sección TI_LONGTEX dinámicamente basada en los items del aviso
+      let tiLongTexSectionItems = '';
+      let counter = 1; // Un solo contador para SUBCO y LINEA
+
+      if (avisoMantenimiento.items && avisoMantenimiento.items.length > 0) {
+        for (const item of avisoMantenimiento.items) {
+          if (item.longTexts && item.longTexts.length > 0) {
+            for (const longText of item.longTexts) {
+              const formattedNumber = String(counter).padStart(5, '0');
+              const formattedConse = String(avisoMantenimiento.id).padStart(10, '0');
+
+              tiLongTexSectionItems += `
+            <item>
+               <CONSE>${formattedConse}</CONSE>
+               <SUBCO>${formattedNumber}</SUBCO>
+               <LINEA>${formattedNumber}</LINEA>
+               <TEXT_LINE>${longText.textLine}</TEXT_LINE>
+            </item>`;
+
+              counter++;
+            }
+          }
+        }
+      }
+
+      // Si no hay longTexts, crear una entrada vacía para evitar errores
+      if (tiLongTexSectionItems === '') {
+        const formattedConse = String(avisoMantenimiento.id).padStart(10, '0');
+        tiLongTexSectionItems = `
+            <item>
+               <CONSE>${formattedConse}</CONSE>
+               <SUBCO>00001</SUBCO>
+               <LINEA>00001</LINEA>
+               <TEXT_LINE>Texto automático - Sin texto largo especificado</TEXT_LINE>
+            </item>`;
+      }
+
+      // Construir la sección TI_NOTITEM dinámicamente basada en los items del aviso
+      let tiNotItemSectionItems = '';
+      let itemCounter = 1;
+
+      if (avisoMantenimiento.items && avisoMantenimiento.items.length > 0) {
+        for (const item of avisoMantenimiento.items) {
+          if (item.inspecciones && item.inspecciones.length > 0) {
+            const formattedNumber = String(itemCounter).padStart(5, '0');
+            const formattedKey = String(itemCounter).padStart(4, '0');
+            const formattedConse = String(avisoMantenimiento.id).padStart(10, '0');
+            
+            // Agrupar todas las inspecciones del item para obtener códigos por catálogo
+            const todasInspecciones = item.inspecciones;
+            
+            // Si hay múltiples grupos de códigos, usar el primer grupo como principal
+            const gruposPorCodigo = [...new Set(todasInspecciones.map(i => i.codigoGrupo))];
+            const codigoGrupoPrincipal = gruposPorCodigo[0];
+            
+            // Buscar códigos por catálogo en todas las inspecciones del item
+            const codigoB = todasInspecciones.find(i => i.catalogo === 'B')?.codigo || '';
+            const codigoC = todasInspecciones.find(i => i.catalogo === 'C')?.codigo || '';
+            const codigo5 = todasInspecciones.find(i => i.catalogo === '5')?.codigo || '';
+            
+            // Usar la primera inspección para la descripción principal
+            const inspeccionPrincipal = todasInspecciones[0];
+
+            tiNotItemSectionItems += `
+            <item>
+               <CONSE>${formattedConse}</CONSE>
+               <SUBCO>${formattedNumber}</SUBCO>
+               <ITEM_KEY>${formattedKey}</ITEM_KEY>
+               <ITEM_SORT_NO>${formattedKey}</ITEM_SORT_NO>
+               <DESCRIPT>${inspeccionPrincipal.descripcion}</DESCRIPT>
+               <D_CODEGRP>${codigoGrupoPrincipal}</D_CODEGRP>
+               <D_CODE>${codigoB}</D_CODE>
+               <DL_CODEGRP>${codigoGrupoPrincipal}</DL_CODEGRP>
+               <DL_CODE>${codigoC}</DL_CODE>
+               <CAUSE_KEY>${formattedKey}</CAUSE_KEY>
+               <CAUSE_SORT_NO>${formattedKey}</CAUSE_SORT_NO>
+               <CAUSETEXT>${inspeccionPrincipal.descripcion}</CAUSETEXT>
+               <CAUSE_CODEGRP>${codigoGrupoPrincipal}</CAUSE_CODEGRP>
+               <CAUSE_CODE>${codigo5}</CAUSE_CODE>
+            </item>`;
+
+            itemCounter++;
+          }
+        }
+      }
+
+      // Si no hay inspecciones, crear entradas vacías para evitar errores
+      if (tiNotItemSectionItems === '') {
+        const formattedConse = String(avisoMantenimiento.id).padStart(10, '0');
+        tiNotItemSectionItems = `
+            <item>
+               <CONSE>${formattedConse}</CONSE>
+               <SUBCO>00001</SUBCO>
+               <ITEM_KEY>0001</ITEM_KEY>
+               <ITEM_SORT_NO>0001</ITEM_SORT_NO>
+               <DESCRIPT>Sin inspecciones especificadas</DESCRIPT>
+               <D_CODEGRP>HERR01</D_CODEGRP>
+               <D_CODE>10</D_CODE>
+               <DL_CODEGRP>HERR01</DL_CODEGRP>
+               <DL_CODE>10</DL_CODE>
+               <CAUSE_KEY>0001</CAUSE_KEY>
+               <CAUSE_SORT_NO>0001</CAUSE_SORT_NO>
+               <CAUSETEXT>Sin inspecciones especificadas</CAUSETEXT>
+               <CAUSE_CODEGRP>HERR01</CAUSE_CODEGRP>
+               <CAUSE_CODE>10</CAUSE_CODE>
+            </item>`;
+      }
+
+      // Construir el cuerpo SOAP
+      const soapBody = `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:sap-com:document:sap:rfc:functions">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <urn:ZIMMF_CREAR_AVISO>
+         <I_NOTHEAD>
+            <NOTIF_TYPE>${avisoMantenimiento.tipoAviso.nombre}</NOTIF_TYPE>
+            <EQUIPMENT>${avisoMantenimiento.equipo.numeroEquipo}</EQUIPMENT>
+            <FUNCT_LOC>${avisoMantenimiento.equipo.ubicacionTecnica}</FUNCT_LOC>
+            <SHORT_TEXT>${avisoMantenimiento.textoBreve}</SHORT_TEXT>
+            <DESSTDATE>${avisoMantenimiento.fechaInicio}</DESSTDATE>
+            <DESSTTIME>${avisoMantenimiento.horaInicio}</DESSTTIME>
+            <DESENDDATE>${avisoMantenimiento.fechaFin}</DESENDDATE>
+            <DESENDTM>${avisoMantenimiento.horaFin}</DESENDTM>
+            <PM_WKCTR>${avisoMantenimiento.equipo.puestoTrabajo}</PM_WKCTR>
+            <REPORTEDBY>CONS_ABAP2</REPORTEDBY>
+            <START_POINT>PUNTO DE INICIO</START_POINT>
+            <END_POINT>PUNTO DE FIN</END_POINT>
+            <LINEAR_LENGTH>120</LINEAR_LENGTH>
+            <LINEAR_UNIT>CM</LINEAR_UNIT>
+         </I_NOTHEAD>
+          <TI_LONGTEX>${tiLongTexSectionItems}
+         </TI_LONGTEX>
+         <TI_NOTITEM>${tiNotItemSectionItems}
+         </TI_NOTITEM>
+      </urn:ZIMMF_CREAR_AVISO>
+   </soapenv:Body>
+</soapenv:Envelope>`;
+
+      // Configurar headers para la petición SOAP con autenticación básica
+      const headers = {
+        'Content-Type': 'text/xml; charset=utf-8',
+        'SOAPAction': 'urn:sap-com:document:sap:rfc:functions:ZIMMF_CREAR_AVISO',
+        'Authorization': 'Basic ' + Buffer.from('cons_abap2:atabak').toString('base64')
+      };
+
+      Logger.log(soapBody);
+      // URL del servicio SAP
+      const sapUrl = 'http://smadev.laboratoriossmart.com:8000/sap/bc/srt/rfc/sap/zws_crear_aviso/300/zws_crear_aviso/zws_crear_aviso';
+
+      // Realizar la petición POST a SAP
+      const response = await axios.post(sapUrl, soapBody, { headers });
+
+      Logger.log(response.data);
+      
+      if (response.status === 200) {
+        // Parsear la respuesta XML para extraer el número de aviso SAP si existe
+        try {
+          const parser = new xml2js.Parser({ explicitArray: false });
+          const parsedData = await parser.parseStringPromise(response.data);
+          
+          // Aquí puedes extraer el número de aviso SAP de la respuesta si SAP lo devuelve
+          // La estructura exacta depende de la respuesta de SAP
+          
+          // Actualizar el estado del aviso a "enviado"
+          await this.avisosMantenimientoService.update(avisoId, {
+            estado: 'enviado'
+          });
+
+          return {
+            success: true,
+            message: 'Aviso de mantenimiento enviado a SAP exitosamente',
+            data: {
+              avisoId: avisoId,
+              sapResponse: response.data
+            }
+          };
+        } catch (parseError) {
+          // Si no se puede parsear la respuesta, aún consideramos que el envío fue exitoso
+          await this.avisosMantenimientoService.update(avisoId, {
+            estado: 'enviado'
+          });
+
+          return {
+            success: true,
+            message: 'Aviso de mantenimiento enviado a SAP exitosamente',
+            data: {
+              avisoId: avisoId,
+              sapResponse: response.data
+            }
+          };
+        }
+      }
+
+      // Si la respuesta no es 200, marcar como fallido
+      await this.avisosMantenimientoService.update(avisoId, {
+        estado: 'fallido'
+      });
+
+      return {
+        success: false,
+        message: 'Error al enviar aviso de mantenimiento a SAP',
+        data: {
+          avisoId: avisoId,
+          statusCode: response.status,
+          sapResponse: response.data
+        }
+      };
+
+    } catch (error) {
+      // Marcar el aviso como fallido
+      try {
+        await this.avisosMantenimientoService.update(avisoId, {
+          estado: 'fallido'
+        });
+      } catch (updateError) {
+        // Si no se puede actualizar el estado, continuar con el error original
+      }
+
+      throw new HttpException(
+        `Error al enviar aviso de mantenimiento a SAP: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  async enviarAvisosMantenimiento(avisosIds: number[]) {
+    try {
+      const results: any[] = [];
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const avisoId of avisosIds) {
+        try {
+          const result = await this.enviarAvisoMantenimiento(avisoId);
+          results.push(result);
+          if (result.success) {
+            successCount++;
+          } else {
+            errorCount++;
+          }
+        } catch (error) {
+          errorCount++;
+          results.push({
+            success: false,
+            message: `Error al enviar aviso ${avisoId}: ${error.message}`,
+            data: {
+              avisoId: avisoId,
+              error: error.message
+            }
+          });
+        }
+      }
+
+      return {
+        success: errorCount === 0,
+        message: `Procesados ${avisosIds.length} avisos. ${successCount} exitosos, ${errorCount} fallidos`,
+        data: {
+          totalProcessed: avisosIds.length,
+          successCount,
+          errorCount,
+          results
+        }
+      };
+
+    } catch (error) {
+      throw new HttpException(
+        `Error al procesar avisos de mantenimiento: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }

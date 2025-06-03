@@ -1,11 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, ManyToMany, JoinTable } from 'typeorm';
 import { MasterUser } from '../../master_user/entities/master-user.entity';
 import { TipoAviso } from 'src/tipo_avisos/entities/tipo-aviso.entity';
 import { Equipo } from 'src/equipos/entities/equipo.entity';
-import { ParteObjeto } from 'src/parte_objeto/entities/parte-objeto.entity';
 import { ReporterUser } from 'src/reporter_user/entities/reporter-user.entity';
-import { Inspeccion } from 'src/inspeccion/entities/inspeccion.entity';
 import { Material } from 'src/material/entities/material.entity';
+import { Item } from 'src/items/entities/item.entity';
 
 @Entity('avisos_mantenimiento')
 export class AvisoMantenimiento {
@@ -30,22 +29,12 @@ export class AvisoMantenimiento {
   })
   equipo: Equipo;
 
-  @ManyToOne(() => ParteObjeto, (parteObjeto) => parteObjeto.id, {
-    eager: true,
-  })
-  parteObjeto: ParteObjeto;
-
   @ManyToOne(() => ReporterUser, (reporterUser) => reporterUser.id, {
     eager: true,
     nullable: true,
     onDelete: 'SET NULL',
   })
   reporterUser: ReporterUser;
-
-  @ManyToOne(() => Inspeccion, (inspeccion) => inspeccion.id, {
-    eager: true,
-  })
-  inspeccion: Inspeccion;
 
   @ManyToOne(() => Material, (material) => material.id, {
     eager: true,
@@ -76,4 +65,7 @@ export class AvisoMantenimiento {
 
   @Column({ nullable: true })
   numeroSap: string;
+
+  @ManyToMany(() => Item, (item) => item.avisoMantenimientos)
+  items: Item[];
 } 
