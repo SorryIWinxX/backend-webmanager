@@ -6,16 +6,19 @@ import { CreateLongTextDto } from "../../long_text/dto/create-long_text.dto";
 // DTO para los items del aviso de mantenimiento
 export class CreateItemForAvisoDto {
   @ApiProperty({
-    description: 'Array of inspection IDs',
-    example: [1, 2, 3],
-    type: [Number]
+    description: 'Array of inspection ID arrays - each sub-array represents a set of inspections',
+    example: [
+      [1, 2, 3],
+      [4, 5, 6],
+      [7, 8, 9]
+    ]
   })
   @IsArray()
-  @IsNumber({}, { each: true })
-  inspeccionIds: number[];
+  @IsArray({ each: true })
+  inspeccionIds: number[][];
 
   @ApiProperty({
-    description: 'Array of long text objects to be created',
+    description: 'Array of long text objects - must match the number of inspection sets',
     type: [CreateLongTextDto],
     example: [
       {
@@ -25,6 +28,10 @@ export class CreateItemForAvisoDto {
       {
         "linea": "line2", 
         "textLine": "Esta es la línea 2"
+      },
+      {
+        "linea": "line3",
+        "textLine": "Esta es la línea 3"
       }
     ]
   })
@@ -146,7 +153,11 @@ export class CreateAvisosMantenimientoDto {
     type: [CreateItemForAvisoDto],
     example: [
       {
-        "inspeccionIds": [1, 2, 3],
+        "inspeccionIds": [
+          [1, 2, 3],
+          [4, 5, 6],
+          [7, 8, 9]
+        ],
         "longTextIds": [
           {
             "linea": "line1",

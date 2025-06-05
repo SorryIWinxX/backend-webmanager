@@ -64,21 +64,25 @@ export class AvisosMantenimientoService {
       const items: Item[] = [];
       
       for (const itemData of createAvisosMantenimientoDto.items) {
-        // Crear los longTexts si existen
-        let longTextsData: { linea: string; textLine: string; }[] | undefined = undefined;
-        if (itemData.longTextIds && itemData.longTextIds.length > 0) {
-          longTextsData = itemData.longTextIds.map(longText => ({
-            linea: longText.linea,
-            textLine: longText.textLine,
-          }));
+        // Validar que el número de sets de inspecciones coincida con el número de longTexts
+        if (itemData.inspeccionIds.length !== itemData.longTextIds.length) {
+          throw new Error(
+            `El número de sets de inspecciones (${itemData.inspeccionIds.length}) debe coincidir con el número de longTexts (${itemData.longTextIds.length})`
+          );
         }
 
-        const item = await this.itemsService.create({
-          longTexts: longTextsData,
-          inspeccionIds: itemData.inspeccionIds,
-        });
-        
-        items.push(item);
+        // Crear un item por cada set de inspección con su correspondiente longText
+        for (let i = 0; i < itemData.inspeccionIds.length; i++) {
+          const inspeccionSet = itemData.inspeccionIds[i];
+          const longTextData = itemData.longTextIds[i];
+
+          const item = await this.itemsService.create({
+            longTexts: [longTextData],
+            inspeccionIds: inspeccionSet,
+          });
+          
+          items.push(item);
+        }
       }
 
       avisoMantenimiento.items = items;

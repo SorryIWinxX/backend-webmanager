@@ -1,4 +1,133 @@
-# Ejemplos de Uso de la API de Items
+# Ejemplos de Uso de la API de Avisos de Mantenimiento
+
+## Estructura Actualizada para Avisos de Mantenimiento
+
+La API ahora soporta la creación de avisos de mantenimiento con la nueva estructura donde por cada N inspecciones debe haber N longText correspondientes.
+
+### Estructura JSON Actualizada:
+
+```json
+{
+  "numeroExt": "EXT-2024-001",
+  "masterUser": 1,
+  "tipoAviso": 1,
+  "equipo": 1,
+  "reporterUser": 1,
+  "material": 1,
+  "textoBreve": "Bomba centrífuga presenta ruido anormal y vibración excesiva",
+  "fechaInicio": "2024-01-15",
+  "fechaFin": "2024-01-16",
+  "horaInicio": "08:00:00",
+  "horaFin": "17:00:00",
+  "items": [
+    {
+      "inspeccionIds": [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9]
+      ],
+      "longTextIds": [
+        {
+          "linea": "line1",
+          "textLine": "Esta es la línea 1"
+        },
+        {
+          "linea": "line2",
+          "textLine": "Esta es la línea 2"
+        },
+        {
+          "linea": "line3",
+          "textLine": "Esta es la línea 3"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Endpoints Disponibles
+
+### 1. Crear Aviso de Mantenimiento
+```
+POST /avisos-mantenimiento
+```
+
+**Importante**: El número de arrays en `inspeccionIds` debe coincidir exactamente con el número de objetos en `longTextIds`. En el ejemplo anterior:
+- 3 arrays de inspecciones: `[1,2,3]`, `[4,5,6]`, `[7,8,9]`
+- 3 objetos longText correspondientes
+
+Esto creará 3 items separados:
+1. Item 1: inspecciones 1,2,3 con longText "Esta es la línea 1"
+2. Item 2: inspecciones 4,5,6 con longText "Esta es la línea 2"  
+3. Item 3: inspecciones 7,8,9 con longText "Esta es la línea 3"
+
+### 2. Casos de Uso Específicos
+
+#### Caso 1: Un solo set de inspecciones
+```json
+{
+  // ... otros campos del aviso ...
+  "items": [
+    {
+      "inspeccionIds": [
+        [1, 2, 3]
+      ],
+      "longTextIds": [
+        {
+          "linea": "line1",
+          "textLine": "Revisión de ventilador"
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### Caso 2: Múltiples sets de inspecciones
+```json
+{
+  // ... otros campos del aviso ...
+  "items": [
+    {
+      "inspeccionIds": [
+        [1, 2, 3],
+        [4, 5],
+        [6, 7, 8, 9]
+      ],
+      "longTextIds": [
+        {
+          "linea": "line1",
+          "textLine": "Revisión del sistema de aire acondicionado"
+        },
+        {
+          "linea": "line2", 
+          "textLine": "Verificación de filtros"
+        },
+        {
+          "linea": "line3",
+          "textLine": "Mantenimiento del compresor"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### 3. Validaciones Importantes
+
+1. **Correspondencia 1:1**: Cada array de inspecciones debe tener un longText correspondiente
+2. **Error de validación**: Si el número no coincide, se retornará un error:
+   ```
+   "El número de sets de inspecciones (X) debe coincidir con el número de longTexts (Y)"
+   ```
+
+### 4. Otros Endpoints
+
+```
+GET /avisos-mantenimiento        # Obtener todos los avisos
+GET /avisos-mantenimiento/{id}   # Obtener aviso por ID
+PATCH /avisos-mantenimiento/{id} # Actualizar aviso
+```
 
 ## Estructura de Base de Datos Actualizada
 
