@@ -5,6 +5,7 @@ import { MaterialService } from 'src/material/material.service';
 import { TipoAvisosService } from 'src/tipo_avisos/tipo_avisos.service';
 import { AvisosMantenimientoService } from 'src/avisos_mantenimiento/avisos_mantenimiento.service';
 import { OrdernesMantenimientoService } from 'src/ordernes_mantenimiento/ordernes_mantenimiento.service';
+import { AvisoCreadosService } from 'src/aviso_creados/aviso_creados.service';
 import axios from 'axios';
 import * as xml2js from 'xml2js';
 
@@ -20,6 +21,7 @@ export class SapService {
     private readonly tipoAvisosService: TipoAvisosService,
     private readonly avisosMantenimientoService: AvisosMantenimientoService,
     private readonly ordernesMantenimientoService: OrdernesMantenimientoService,
+    private readonly avisoCreadosService: AvisoCreadosService,
   ) {}
 
   /*
@@ -37,13 +39,15 @@ export class SapService {
         equiposResult,
         materialesResult,
         tipoAvisosResult,
-        ordenesMantenimientoResult
+        ordenesMantenimientoResult,
+        avisosCreadosResult
       ] = await Promise.allSettled([
         this.sincronizarInspecciones(),
         this.sincronizarEquipos(),
         this.sincronizarMateriales(),
         this.sincronizarTipoAvisos(),
-        this.sincronizarOrdenesMantenimiento()
+        this.sincronizarOrdenesMantenimiento(),
+        this.sincronizarAvisosCreados()
       ]);
 
       // Process results and handle any failures
@@ -52,7 +56,8 @@ export class SapService {
         equipos: this.processSettledResult(equiposResult, 'Equipos'),
         materiales: this.processSettledResult(materialesResult, 'Materiales'),
         tipoAvisos: this.processSettledResult(tipoAvisosResult, 'Tipo Avisos'),
-        ordenesMantenimiento: this.processSettledResult(ordenesMantenimientoResult, 'Órdenes de Mantenimiento')
+        ordenesMantenimiento: this.processSettledResult(ordenesMantenimientoResult, 'Órdenes de Mantenimiento'),
+        avisosCreados: this.processSettledResult(avisosCreadosResult, 'Avisos Creados')
       };
 
       // Calculate totals
@@ -1117,6 +1122,133 @@ export class SapService {
     } catch (error) {
       throw new HttpException(
         `Error al procesar avisos de mantenimiento: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  private async sincronizarAvisosCreados() {
+    try {
+      const response = await this.getTableAvisosCreados();
+      
+      if (response.success && response.data) {
+        // Parse the XML response
+        const parser = new xml2js.Parser({ explicitArray: false });
+        const parsedData = await parser.parseStringPromise(response.data);
+        
+        // Extract TI_LISAVI data from the parsed XML
+        const soapBody = parsedData['soap-env:Envelope']['soap-env:Body'];
+        const zimmfResponse = soapBody['n0:ZIMMF_TABLASResponse'];
+        const tiLisavi = zimmfResponse['TI_LISAVI'];
+        
+        let avisosCreadosData = [];
+        if (tiLisavi && tiLisavi.item) {
+          // Handle both single item and array of items
+          avisosCreadosData = Array.isArray(tiLisavi.item) ? tiLisavi.item : [tiLisavi.item];
+        }
+        
+        // Process avisos creados in chunks
+        let totalProcessedItems = 0;
+        let totalCreatedCount = 0;
+        let totalUpdatedCount = 0;
+        let totalErrorCount = 0;
+
+        for (let i = 0; i < avisosCreadosData.length; i += CHUNK_SIZE) {
+          const chunk = avisosCreadosData.slice(i, i + CHUNK_SIZE);
+          const upsertResult = await this.avisoCreadosService.upsertAvisosCreados(chunk);
+          totalCreatedCount += upsertResult.createdCount;
+          totalUpdatedCount += upsertResult.updatedCount;
+          totalErrorCount += upsertResult.errorCount;
+          totalProcessedItems += chunk.length;
+        }
+        
+        return {
+          success: true,
+          message: 'Sincronización de avisos creados con SAP completada exitosamente',
+          data: {
+            processedItems: totalProcessedItems,
+            createdCount: totalCreatedCount,
+            updatedCount: totalUpdatedCount,
+            errorCount: totalErrorCount
+          }
+        };
+      }
+      
+      return {
+        success: false,
+        message: 'Error en la sincronización de avisos creados con SAP',
+        data: {
+          processedItems: 0,
+          createdCount: 0,
+          updatedCount: 0,
+          errorCount: 0
+        }
+      };
+      
+    } catch (error) {
+      throw new HttpException(
+        `Error al sincronizar avisos creados con SAP: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  private async getTableAvisosCreados() {
+    try {
+      const sapSyncUrl = 'http://smadev.laboratoriossmart.com:8000/sap/bc/srt/rfc/sap/zws_tablas/300/zws_tablas/zws_tablas';
+      
+      const soapBody = `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:sap-com:document:sap:rfc:functions">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <urn:ZIMMF_TABLAS>
+         <I_OPCION>AVIS</I_OPCION>
+         <!--Optional:-->
+         <TI_LISAVI>
+            <item>
+               <QMNUM></QMNUM>
+               <QMART></QMART>
+               <EQUNR></EQUNR>
+               <TPLNR></TPLNR>
+               <QMTXT></QMTXT>
+               <BAUTL></BAUTL>
+               <STRMN></STRMN>
+               <STRUR></STRUR>
+               <LTRMN></LTRMN>
+               <LTRUR></LTRUR>
+               <ARBPL></ARBPL>
+               <QMNAM></QMNAM>
+            </item>
+         </TI_LISAVI>
+      </urn:ZIMMF_TABLAS>
+   </soapenv:Body>
+</soapenv:Envelope>`;
+
+      // Configurar headers para la petición SOAP
+      const headers = {
+        'Content-Type': 'text/xml; charset=utf-8',
+        'SOAPAction': 'urn:sap-com:document:sap:rfc:functions:ZIMMF_TABLAS',
+      };
+
+      // Realizar la petición POST a SAP
+      const response = await axios.post(sapSyncUrl, soapBody, { headers });
+
+      if (response.status === 200) {
+        return {
+          success: true,
+          message: 'Sincronización de avisos creados con SAP completada exitosamente',
+          data: response.data
+        };
+      }
+
+      return {
+        success: false,
+        message: 'Error en la sincronización de avisos creados con SAP',
+        data: response.data
+      };
+
+    } catch (error) {
+      throw new HttpException(
+        `Error al sincronizar avisos creados con SAP: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }

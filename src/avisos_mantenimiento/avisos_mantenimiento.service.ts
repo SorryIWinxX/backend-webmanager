@@ -47,7 +47,6 @@ export class AvisosMantenimientoService {
     const material = await this.validateMaterial(createAvisosMantenimientoDto.material);
     
     const avisoMantenimiento = await this.avisosMantenimientoRepository.save({
-      numeroExt: createAvisosMantenimientoDto.numeroExt,
       textoBreve: createAvisosMantenimientoDto.textoBreve,
       fechaInicio: createAvisosMantenimientoDto.fechaInicio,
       fechaFin: createAvisosMantenimientoDto.fechaFin,

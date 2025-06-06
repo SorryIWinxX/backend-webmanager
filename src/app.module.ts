@@ -12,6 +12,7 @@ import { MaterialModule } from './material/material.module';
 import { LongTextModule } from './long_text/long_text.module';
 import { ItemsModule } from './items/items.module';
 import { SapModule } from './sap/sap.module';
+import { AvisoCreadosModule } from './aviso_creados/aviso_creados.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { SapModule } from './sap/sap.module';
     LongTextModule,
     ItemsModule,
     SapModule,
+    AvisoCreadosModule,
   ],
 
 })

@@ -8,9 +8,9 @@ export class CreateItemForAvisoDto {
   @ApiProperty({
     description: 'Array of inspection ID arrays - each sub-array represents a set of inspections',
     example: [
-      [1, 2, 3],
-      [4, 5, 6],
-      [7, 8, 9]
+      [72, 283, 707],
+      [72, 283, 707],
+      [72, 283, 707]
     ]
   })
   @IsArray()
@@ -23,15 +23,15 @@ export class CreateItemForAvisoDto {
     example: [
       {
         "linea": "line1",
-        "textLine": "Esta es la línea 1"
+        "textLine": "Esta es la línea de inspección 1"
       },
       {
         "linea": "line2", 
-        "textLine": "Esta es la línea 2"
+        "textLine": "Esta es la línea de inspección 2"
       },
       {
         "linea": "line3",
-        "textLine": "Esta es la línea 3"
+        "textLine": "Esta es la línea de inspección 3"
       }
     ]
   })
@@ -42,15 +42,6 @@ export class CreateItemForAvisoDto {
 }
 
 export class CreateAvisosMantenimientoDto {
-  @ApiPropertyOptional({
-    description: 'External number for the maintenance notice (optional)',
-    example: 'EXT-2024-001',
-    type: String,
-    nullable: true
-  })
-  @IsOptional()
-  @IsString()
-  numeroExt?: string;
 
   @ApiProperty({
     description: 'ID of the master user creating the notice',
@@ -99,7 +90,7 @@ export class CreateAvisosMantenimientoDto {
 
   @ApiProperty({
     description: 'Brief description of the maintenance issue',
-    example: 'Bomba centrífuga presenta ruido anormal y vibración excesiva',
+    example: 'Bomba centrífuga presenta',
     type: String,
     maxLength: 500
   })
@@ -154,22 +145,22 @@ export class CreateAvisosMantenimientoDto {
     example: [
       {
         "inspeccionIds": [
-          [1, 2, 3],
-          [4, 5, 6],
-          [7, 8, 9]
+          [72, 283, 707],
+          [72, 283, 707],
+          [72, 283, 707]
         ],
         "longTextIds": [
           {
             "linea": "line1",
-            "textLine": "Esta es la línea 1"
+            "textLine": "Esta es la línea de inspección 1"
           },
           {
             "linea": "line2",
-            "textLine": "Esta es la línea 2"
+            "textLine": "Esta es la línea de inspección 2"
           },
           {
             "linea": "line3",
-            "textLine": "Esta es la línea 3"
+            "textLine": "Esta es la línea de inspección 3"
           }
         ]
       }
